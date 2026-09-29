@@ -253,7 +253,6 @@
         import { getDatabase, ref as dbRef, onValue, set, push, remove, get } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
         import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 
-        // Konfigurasi Firebase Anda
         const firebaseConfig = {
             apiKey: "AIzaSyAwltZ2_2g6-VTqaxCvWE3QG8jIFKYmsaE",
             authDomain: "mykanbanboard-68122.firebaseapp.com",
@@ -268,14 +267,12 @@
         const database = getDatabase(app);
         const storage = getStorage(app);
 
-        // State Global
         let courses = {
             "Koorprak Matek": ["Briefing & Koordinasi", "Pembuatan Modul / Soal", "Evaluasi Asisten & Nilai"],
             "Kelas Komposit": ["Koreksi Tugas / Laporan", "Mengajar / Asistensi Lab", "Persiapan Alat & Bahan"]
         };
         let logs = [];
 
-        // Global functions binding
         window.switchTab = switchTab;
         window.updateSubJobDropdown = updateSubJobDropdown;
         window.handleLogSubmit = handleLogSubmit;
@@ -295,7 +292,6 @@
         });
 
         function initRealtimeSync() {
-            // 1. Sync Courses / Jobs
             const coursesRef = dbRef(database, 'settings/courses');
             onValue(coursesRef, (snapshot) => {
                 const data = snapshot.val();
@@ -309,7 +305,6 @@
                 renderDashboard();
             });
 
-            // 2. Sync Logs
             const logsRef = dbRef(database, 'logs');
             onValue(logsRef, (snapshot) => {
                 const data = snapshot.val();
@@ -318,7 +313,6 @@
                     Object.keys(data).forEach(key => {
                         logs.push({ id: key, ...data[key] });
                     });
-                    // Urutkan dari yang terbaru
                     logs.sort((a, b) => b.timestamp - a.timestamp);
                 }
                 renderDashboard();
@@ -422,7 +416,6 @@
             const course = document.getElementById('input-course').value;
             const subjob = document.getElementById('input-subjob').value;
             const rawDate = document.getElementById('input-date').value;
-            // Format tanggal jadi DD/MM/YYYY atau tetap YYYY-MM-DD sesuai selera
             const [y, m, d] = rawDate.split('-');
             const date = `${d}/${m}/${y}`;
             const duration = parseFloat(document.getElementById('input-duration').value);
@@ -492,7 +485,7 @@
             const filter = filterEl.value;
             const filteredLogs = filter === 'ALL' ? logs : logs.filter(l => l.course === filter);
             
-            // Total Hours & Stats (global / berdasarkan filter)
+            // Total Jam & Stats (disesuaikan dengan filter yang aktif)
             const totalHours = filteredLogs.reduce((acc, curr) => acc + (curr.duration || 0), 0);
             document.getElementById('stat-total-hours').innerText = `${totalHours} Jam`;
             document.getElementById('stat-total-logs').innerText = filteredLogs.length;
@@ -502,7 +495,7 @@
             const tbody = document.getElementById('logs-table-body');
             tbody.innerHTML = '';
             if (filteredLogs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">Belum ada catatan aktivitas.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">Belum ada catatan aktivitas untuk filter ini.</td></tr>`;
             } else {
                 filteredLogs.forEach(l => {
                     const photoHtml = l.photo 
@@ -527,7 +520,7 @@
                 });
             }
 
-            // Render Breakdown Container (Sesuai dengan filter dropdown aktif)
+            // Render Breakdown Container (Kini benar-benar mengikuti filter dropdown kanan atas)
             const breakdownContainer = document.getElementById('breakdown-container');
             breakdownContainer.innerHTML = '';
             
