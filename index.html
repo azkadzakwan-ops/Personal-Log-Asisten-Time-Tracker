@@ -409,16 +409,18 @@
             }
         }
 
-        // Kompres gambar otomatis sebelum dikirim ke Realtime Database
+        // Kompres gambar otomatis dengan pengaman aman
         function compressImage(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
+                reader.onerror = () => resolve("");
                 reader.onload = function (e) {
                     const img = new Image();
+                    img.onerror = () => resolve("");
                     img.onload = function () {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800;
-                        const MAX_HEIGHT = 800;
+                        const MAX_WIDTH = 400;
+                        const MAX_HEIGHT = 400;
                         let width = img.width;
                         let height = img.height;
 
@@ -438,7 +440,7 @@
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                        resolve(canvas.toDataURL('image/jpeg', 0.6));
                     };
                     img.src = e.target.result;
                 };
@@ -517,7 +519,7 @@
             const filter = filterEl.value;
             const filteredLogs = filter === 'ALL' ? logs : logs.filter(l => l.course === filter);
             
-            // Total Jam & Stats (disesuaikan dengan filter yang aktif)
+            // Total Jam & Stats
             const totalHours = filteredLogs.reduce((acc, curr) => acc + (curr.duration || 0), 0);
             document.getElementById('stat-total-hours').innerText = `${totalHours} Jam`;
             document.getElementById('stat-total-logs').innerText = filteredLogs.length;
@@ -552,7 +554,7 @@
                 });
             }
 
-            // Render Breakdown Container (Sinkron dengan pilihan filter di kanan atas)
+            // Render Breakdown Container
             const breakdownContainer = document.getElementById('breakdown-container');
             breakdownContainer.innerHTML = '';
             
