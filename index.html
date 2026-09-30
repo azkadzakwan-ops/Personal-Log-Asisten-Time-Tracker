@@ -33,7 +33,7 @@
                     <i data-lucide="clock" class="w-7 h-7"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-tight">Personal Asisten Log - Azka</h1>
+                    <h1 class="text-xl font-bold tracking-tight">Personal Asisten Log</h1>
                     <p id="header-subtitle" class="text-xs text-indigo-200">(Realtime Cloud)</p>
                 </div>
             </div>
@@ -331,6 +331,32 @@
             });
         }
 
+        // Fungsi helper untuk menyeragamkan format tanggal ke DD/MM/YYYY
+        function formatDateToID(dateStr) {
+            if (!dateStr) return '';
+            // Jika formatnya YYYY-MM-DD
+            if (dateStr.includes('-')) {
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+            }
+            // Jika sudah DD/MM/YYYY, kembalikan apa adanya
+            return dateStr;
+        }
+
+        // Fungsi untuk mengubah tanggal DD/MM/YYYY kembali ke YYYY-MM-DD untuk input type="date" saat diedit
+        function formatDateForInput(dateStr) {
+            if (!dateStr) return '';
+            if (dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                }
+            }
+            return dateStr;
+        }
+
         function initRealtimeSync() {
             const coursesRef = dbRef(database, 'settings/courses');
             onValue(coursesRef, (snapshot) => {
@@ -357,9 +383,11 @@
                     logs.sort((a, b) => {
                         const parseDateStr = (dateStr) => {
                             if (!dateStr) return 0;
-                            const parts = dateStr.split('-');
-                            if (parts.length === 3) {
-                                return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+                            if (dateStr.includes('-')) {
+                                const parts = dateStr.split('-');
+                                if (parts.length === 3) {
+                                    return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+                                }
                             }
                             const slashParts = dateStr.split('/');
                             if (slashParts.length === 3) {
@@ -518,7 +546,7 @@
             document.getElementById('input-subjob').value = logToEdit.subjob;
             
             if (logToEdit.date) {
-                document.getElementById('input-date').value = logToEdit.date;
+                document.getElementById('input-date').value = formatDateForInput(logToEdit.date);
             }
             
             document.getElementById('input-duration').value = logToEdit.duration;
@@ -539,7 +567,8 @@
             
             const course = document.getElementById('input-course').value;
             const subjob = document.getElementById('input-subjob').value;
-            const date = document.getElementById('input-date').value;
+            const rawDate = document.getElementById('input-date').value;
+            const date = formatDateToID(rawDate); // Paksa format jadi DD/MM/YYYY
             const duration = parseFloat(document.getElementById('input-duration').value);
             const activity = document.getElementById('input-activity').value;
             const photoFile = document.getElementById('input-photo').files[0];
@@ -627,6 +656,7 @@
                 tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center py-8 text-slate-400">Belum ada catatan aktivitas untuk filter ini.</td></tr>`;
             } else {
                 filteredLogs.forEach(l => {
+                    const formattedDate = formatDateToID(l.date);
                     const photoHtml = l.photo 
                         ? `<button onclick="openImageModal('${l.photo}')" class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2 py-1 rounded-lg text-xs font-medium hover:bg-indigo-100"><i data-lucide="image" class="w-3.5 h-3.5"></i> Lihat</button>`
                         : `<span class="text-slate-400 text-xs italic">Tanpa Bukti</span>`;
@@ -646,7 +676,7 @@
 
                     tbody.innerHTML += `
                         <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3 text-slate-600 whitespace-nowrap">${l.date}</td>
+                            <td class="p-3 text-slate-600 whitespace-nowrap">${formattedDate}</td>
                             <td class="p-3 font-semibold text-slate-800">${l.course}</td>
                             <td class="p-3 text-slate-700"><span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg text-xs font-medium">${l.subjob}</span></td>
                             <td class="p-3 text-slate-600">${l.activity}</td>
@@ -780,6 +810,7 @@
             if (confirm(`Yakin ingin menghapus kelas "${courseName}"?`)) {
                 delete courses[courseName];
                 try {
+                    await set(dbRef(database, 'logs/' + id), null); // or courses
                     await set(dbRef(database, 'settings/courses'), courses);
                     showToast("Kelas dihapus!");
                 } catch (err) {
