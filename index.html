@@ -270,7 +270,7 @@
             "Kelas Komposit": ["Koreksi Tugas / Laporan", "Mengajar / Asistensi Lab", "Persiapan Alat & Bahan"]
         };
         let logs = [];
-        let editingLogId = null; // Menyimpan ID log yang sedang diedit
+        let editingLogId = null;
 
         window.switchTab = switchTab;
         window.updateSubJobDropdown = updateSubJobDropdown;
@@ -313,7 +313,27 @@
                     Object.keys(data).forEach(key => {
                         logs.push({ id: key, ...data[key] });
                     });
-                    logs.sort((a, b) => b.timestamp - a.timestamp);
+                    
+                    // URUTKAN BERDASARKAN HARI TERBARU (PALING ATAS) KE TERLAMA
+                    logs.sort((a, b) => {
+                        const parseDateStr = (dateStr) => {
+                            if (!dateStr) return 0;
+                            const parts = dateStr.split('/');
+                            if (parts.length === 3) {
+                                return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+                            }
+                            return 0;
+                        };
+
+                        const dateA = parseDateStr(a.date);
+                        const dateB = parseDateStr(b.date);
+
+                        if (dateA === dateB) {
+                            return (b.timestamp || 0) - (a.timestamp || 0);
+                        }
+
+                        return dateB - dateA;
+                    });
                 }
                 renderDashboard();
             });
@@ -411,7 +431,6 @@
             }
         }
 
-        // Kompres gambar otomatis dengan pengaman aman
         function compressImage(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -506,7 +525,6 @@
                 }
 
                 if (editingLogId) {
-                    // MODE EDIT / UPDATE
                     const logRef = dbRef(database, 'logs/' + editingLogId);
                     const updateData = {
                         course,
@@ -533,7 +551,6 @@
                     submitBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
                     showToast("Aktivitas berhasil diperbarui!");
                 } else {
-                    // MODE TAMBAH BARU
                     const logsRef = dbRef(database, 'logs');
                     const newLogRef = push(logsRef);
                     await set(newLogRef, {
@@ -581,13 +598,11 @@
             const filter = filterEl.value;
             const filteredLogs = filter === 'ALL' ? logs : logs.filter(l => l.course === filter);
             
-            // Total Jam & Stats
             const totalHours = filteredLogs.reduce((acc, curr) => acc + (curr.duration || 0), 0);
             document.getElementById('stat-total-hours').innerText = `${totalHours} Jam`;
             document.getElementById('stat-total-logs').innerText = filteredLogs.length;
             document.getElementById('stat-total-courses').innerText = Object.keys(courses).length;
 
-            // Render Table
             const tbody = document.getElementById('logs-table-body');
             tbody.innerHTML = '';
             if (filteredLogs.length === 0) {
@@ -619,7 +634,6 @@
                 });
             }
 
-            // Render Breakdown Container
             const breakdownContainer = document.getElementById('breakdown-container');
             breakdownContainer.innerHTML = '';
             
