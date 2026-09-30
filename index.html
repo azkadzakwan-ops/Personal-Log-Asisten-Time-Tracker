@@ -690,7 +690,7 @@
                     : subjobs.map(sj => `
                         <span class="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-xs px-2.5 py-1 rounded-lg font-medium group">
                             ${sj}
-                            <button onclick="editSubJobName('${courseName}', '${sj}')" class="text-indigo-400 hover:text-amber-600 ml-1" title="Edit Sub-Job">✎</button>
+                            <button onclick="editSubJobName('${courseName}', '${sj}')" class="text-indigo-400 hover:text-amber-600 ml-1 font-bold" title="Edit Sub-Job">✎</button>
                             <button onclick="removeSubJob('${courseName}', '${sj}')" class="text-indigo-400 hover:text-red-500 ml-0.5 font-bold" title="Hapus">&times;</button>
                         </span>
                     `).join(' ');
@@ -700,7 +700,7 @@
                         <div class="flex justify-between items-center">
                             <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
                                 ${courseName}
-                                <button onclick="editCourseName('${courseName}')" class="text-xs text-amber-600 hover:underline flex items-center gap-0.5 font-normal"><i data-lucide="edit-3" class="w-3 h-3"></i> Edit</button>
+                                <button onclick="editCourseName('${courseName}')" class="text-xs text-amber-600 hover:underline flex items-center gap-1 font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-200"><i data-lucide="edit-3" class="w-3 h-3"></i> Edit Nama</button>
                             </h4>
                             <button onclick="removeCourse('${courseName}')" class="text-xs text-red-600 hover:underline">Hapus Kelas</button>
                         </div>
@@ -746,7 +746,6 @@
                 return;
             }
 
-            // Pindahkan data sub-job ke nama baru
             courses[trimmedName] = courses[oldName];
             if (trimmedName !== oldName) {
                 delete courses[oldName];
