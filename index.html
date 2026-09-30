@@ -250,7 +250,7 @@
     <!-- FIREBASE & APP LOGIC SCRIPT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-        import { getDatabase, ref as dbRef, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+        import { getDatabase, ref as dbRef, onValue, set, push, remove, update } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAwltZ2_2g6-VTqaxCvWE3QG8jIFKYmsaE",
@@ -270,10 +270,12 @@
             "Kelas Komposit": ["Koreksi Tugas / Laporan", "Mengajar / Asistensi Lab", "Persiapan Alat & Bahan"]
         };
         let logs = [];
+        let editingLogId = null; // Menyimpan ID log yang sedang diedit
 
         window.switchTab = switchTab;
         window.updateSubJobDropdown = updateSubJobDropdown;
         window.handleLogSubmit = handleLogSubmit;
+        window.editLog = editLog;
         window.deleteLog = deleteLog;
         window.openImageModal = openImageModal;
         window.closeImageModal = closeImageModal;
@@ -448,6 +450,35 @@
             });
         }
 
+        function editLog(id) {
+            const logToEdit = logs.find(l => l.id === id);
+            if (!logToEdit) return;
+
+            editingLogId = id;
+
+            document.getElementById('input-course').value = logToEdit.course;
+            updateSubJobDropdown();
+            document.getElementById('input-subjob').value = logToEdit.subjob;
+            
+            if (logToEdit.date) {
+                const parts = logToEdit.date.split('/');
+                if (parts.length === 3) {
+                    document.getElementById('input-date').value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                }
+            }
+            
+            document.getElementById('input-duration').value = logToEdit.duration;
+            document.getElementById('input-activity').value = logToEdit.activity;
+
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.innerHTML = `<i data-lucide="refresh-cw" class="w-4 h-4"></i> Update Aktivitas`;
+            submitBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+            submitBtn.classList.add('bg-amber-600', 'hover:bg-amber-700');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            lucide.createIcons();
+        }
+
         async function handleLogSubmit(e) {
             e.preventDefault();
             const course = document.getElementById('input-course').value;
@@ -474,22 +505,53 @@
                     photoUrl = await compressImage(photoInput.files[0]);
                 }
 
-                const logsRef = dbRef(database, 'logs');
-                const newLogRef = push(logsRef);
-                await set(newLogRef, {
-                    course,
-                    subjob,
-                    date,
-                    duration,
-                    activity,
-                    photo: photoUrl,
-                    timestamp: Date.now()
-                });
+                if (editingLogId) {
+                    // MODE EDIT / UPDATE
+                    const logRef = dbRef(database, 'logs/' + editingLogId);
+                    const updateData = {
+                        course,
+                        subjob,
+                        date,
+                        duration,
+                        activity,
+                        timestamp: Date.now()
+                    };
+                    
+                    if (photoUrl) {
+                        updateData.photo = photoUrl;
+                    } else {
+                        const existingLog = logs.find(l => l.id === editingLogId);
+                        if (existingLog && existingLog.photo) {
+                            updateData.photo = existingLog.photo;
+                        }
+                    }
+
+                    await update(logRef, updateData);
+                    
+                    editingLogId = null;
+                    submitBtn.classList.remove('bg-amber-600', 'hover:bg-amber-700');
+                    submitBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                    showToast("Aktivitas berhasil diperbarui!");
+                } else {
+                    // MODE TAMBAH BARU
+                    const logsRef = dbRef(database, 'logs');
+                    const newLogRef = push(logsRef);
+                    await set(newLogRef, {
+                        course,
+                        subjob,
+                        date,
+                        duration,
+                        activity,
+                        photo: photoUrl,
+                        timestamp: Date.now()
+                    });
+                    showToast("Aktivitas berhasil dicatat & disinkronkan!");
+                }
 
                 document.getElementById('input-activity').value = '';
                 document.getElementById('input-duration').value = '2.0';
                 document.getElementById('input-photo').value = '';
-                showToast("Aktivitas berhasil dicatat & disinkronkan!");
+                document.getElementById('input-date').valueAsDate = new Date();
             } catch (error) {
                 console.error("Gagal simpan log:", error);
                 alert("Gagal menyimpan data ke server.");
@@ -544,7 +606,10 @@
                             <td class="p-3 text-slate-600">${l.activity}</td>
                             <td class="p-3 text-center">${photoHtml}</td>
                             <td class="p-3 text-right font-bold text-indigo-600 whitespace-nowrap">${l.duration} Jam</td>
-                            <td class="p-3 text-center">
+                            <td class="p-3 text-center flex items-center justify-center gap-1">
+                                <button onclick="editLog('${l.id}')" class="p-1.5 text-amber-500 hover:bg-amber-50 rounded-lg transition" title="Edit">
+                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                </button>
                                 <button onclick="deleteLog('${l.id}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="Hapus">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>
