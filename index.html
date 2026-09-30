@@ -281,8 +281,10 @@
         window.closeImageModal = closeImageModal;
         window.addCourse = addCourse;
         window.removeCourse = removeCourse;
+        window.editCourseName = editCourseName;
         window.addSubJob = addSubJob;
         window.removeSubJob = removeSubJob;
+        window.editSubJobName = editSubJobName;
         window.renderDashboard = renderDashboard;
 
         document.addEventListener("DOMContentLoaded", () => {
@@ -314,7 +316,6 @@
                         logs.push({ id: key, ...data[key] });
                     });
                     
-                    // URUTKAN BERDASARKAN HARI TERBARU (PALING ATAS) KE TERLAMA
                     logs.sort((a, b) => {
                         const parseDateStr = (dateStr) => {
                             if (!dateStr) return 0;
@@ -687,16 +688,20 @@
                 let sjHtml = subjobs.length === 0 
                     ? '<p class="text-xs text-slate-400 italic">Belum ada sub-job.</p>' 
                     : subjobs.map(sj => `
-                        <span class="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-xs px-2.5 py-1 rounded-lg font-medium">
+                        <span class="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-xs px-2.5 py-1 rounded-lg font-medium group">
                             ${sj}
-                            <button onclick="removeSubJob('${courseName}', '${sj}')" class="text-indigo-400 hover:text-red-500 ml-1 font-bold">&times;</button>
+                            <button onclick="editSubJobName('${courseName}', '${sj}')" class="text-indigo-400 hover:text-amber-600 ml-1" title="Edit Sub-Job">✎</button>
+                            <button onclick="removeSubJob('${courseName}', '${sj}')" class="text-indigo-400 hover:text-red-500 ml-0.5 font-bold" title="Hapus">&times;</button>
                         </span>
                     `).join(' ');
 
                 listContainer.innerHTML += `
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
                         <div class="flex justify-between items-center">
-                            <h4 class="font-bold text-slate-800 text-sm">${courseName}</h4>
+                            <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                ${courseName}
+                                <button onclick="editCourseName('${courseName}')" class="text-xs text-amber-600 hover:underline flex items-center gap-0.5 font-normal"><i data-lucide="edit-3" class="w-3 h-3"></i> Edit</button>
+                            </h4>
                             <button onclick="removeCourse('${courseName}')" class="text-xs text-red-600 hover:underline">Hapus Kelas</button>
                         </div>
                         <div class="flex flex-wrap gap-2 pt-1">
@@ -727,6 +732,31 @@
             showToast(`Kelas ${courseName} berhasil ditambahkan!`);
         }
 
+        async function editCourseName(oldName) {
+            const newName = prompt(`Ubah nama kelas / peran "${oldName}" menjadi:`, oldName);
+            if (!newName) return;
+            const trimmedName = newName.trim();
+            
+            if (!trimmedName) {
+                showToast("Nama kelas tidak boleh kosong!");
+                return;
+            }
+            if (courses[trimmedName] && trimmedName !== oldName) {
+                showToast("Nama kelas tersebut sudah ada!");
+                return;
+            }
+
+            // Pindahkan data sub-job ke nama baru
+            courses[trimmedName] = courses[oldName];
+            if (trimmedName !== oldName) {
+                delete courses[oldName];
+            }
+
+            await saveCoursesToCloud();
+            renderSettings();
+            showToast("Nama kelas berhasil diperbarui!");
+        }
+
         async function removeCourse(courseName) {
             if (confirm(`Yakin ingin menghapus kelas ${courseName}?`)) {
                 delete courses[courseName];
@@ -754,6 +784,27 @@
             subJobInput.value = '';
             renderSettings();
             showToast(`Sub-job ${subJobName} berhasil ditambahkan!`);
+        }
+
+        async function editSubJobName(courseName, oldSubJob) {
+            const newSubJob = prompt(`Ubah nama sub-job "${oldSubJob}" menjadi:`, oldSubJob);
+            if (!newSubJob) return;
+            const trimmedSubJob = newSubJob.trim();
+
+            if (!trimmedSubJob) {
+                showToast("Nama sub-job tidak boleh kosong!");
+                return;
+            }
+
+            if (courses[courseName].includes(trimmedSubJob) && trimmedSubJob !== oldSubJob) {
+                showToast("Sub-job dengan nama tersebut sudah ada di kelas ini!");
+                return;
+            }
+
+            courses[courseName] = courses[courseName].map(sj => sj === oldSubJob ? trimmedSubJob : sj);
+            await saveCoursesToCloud();
+            renderSettings();
+            showToast("Sub-job berhasil diperbarui!");
         }
 
         async function removeSubJob(courseName, subJobName) {
